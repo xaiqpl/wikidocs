@@ -1,0 +1,171 @@
+<!--
+title: Window路由表介绍
+description: 
+published: true
+date: 2025-05-14T11:56:31.581Z
+tags: window, 路由表
+editor: ckeditor
+dateCreated: 2025-05-14T11:56:19.762Z
+-->
+
+<h2>Windows路由表功能原理及参数详解</h2>
+<hr>
+<h4><strong>一、路由表核心功能</strong></h4>
+<p>Windows路由表是操作系统的网络数据包转发决策系统，其核心功能为：</p>
+<ol>
+  <li><strong>路径选择</strong>：根据目标IP地址匹配最佳路由条目，确定数据包的下一跳路径。</li>
+  <li><strong>优先级管理</strong>：通过跃点数（Metric）实现多路径下的优先级控制。</li>
+  <li><strong>网络隔离</strong>：支持多网卡环境下的独立子网通信（如本地局域网、VPN、虚拟网络等）。</li>
+  <li><strong>广播与组播控制</strong>：管理本地链路广播（如<code>255.255.255.255</code>）和组播（如<code>224.0.0.0</code>）的传输范围。</li>
+</ol>
+<p>&nbsp;</p>
+<h4><strong>二、路由表参数解析</strong></h4>
+<p>关键字段：</p>
+<p>&nbsp;</p>
+<figure class="table" style="width:750px;">
+  <table style="background-color:rgb(255, 255, 255);border-bottom:none;border-left:none;border-right:none;border-top:none;">
+    <thead>
+      <tr>
+        <th style="border-bottom:none;border-left:none;border-right:1px solid rgb(214, 214, 214);border-top:none;height:40px;padding:9px 18px;">参数</th>
+        <th style="border-bottom:none;border-left:none;border-right:none;border-top:none;height:40px;padding:9px 18px;">作用与示例分析</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th style="border-bottom:none;border-left:none;border-right:1px solid rgb(214, 214, 214);border-top:none;height:40px;padding:9px 18px;"><strong>网络目标</strong></th>
+        <td style="border-bottom:none;border-left:none;border-right:none;border-top:none;height:40px;padding:9px 18px;">目标IP段或主机地址。例如<code>10.0.0.0/8</code>表示所有以<code>10.x.x.x</code>开头的IP均匹配此路由。</td>
+      </tr>
+      <tr>
+        <th style="border-bottom:none;border-left:none;border-right:1px solid rgb(214, 214, 214);border-top:none;height:40px;padding:9px 18px;"><strong>网络掩码</strong></th>
+        <td style="border-bottom:none;border-left:none;border-right:none;border-top:none;height:40px;padding:9px 18px;">定义网络目标的匹配范围。如<code>255.0.0.0</code>对应CIDR <code>/8</code>，掩码越精确（如<code>255.255.255.255</code>）表示单机路由。</td>
+      </tr>
+      <tr>
+        <th style="border-bottom:none;border-left:none;border-right:1px solid rgb(214, 214, 214);border-top:none;height:40px;padding:9px 18px;"><strong>网关</strong></th>
+        <td style="border-bottom:none;border-left:none;border-right:none;border-top:none;height:40px;padding:9px 18px;">数据包转发的中继设备IP。若为<code>在链路上</code>（On-link），表示目标网络直接连接到此接口，无需经过网关（如<code>127.0.0.1</code>本地环路）。</td>
+      </tr>
+      <tr>
+        <th style="border-bottom:none;border-left:none;border-right:1px solid rgb(214, 214, 214);border-top:none;height:40px;padding:9px 18px;"><strong>接口</strong></th>
+        <td style="border-bottom:none;border-left:none;border-right:none;border-top:none;height:40px;padding:9px 18px;">本地发送数据包的网络适配器地址。例如<code>192.168.240.55</code>对应物理网卡或虚拟接口。</td>
+      </tr>
+      <tr>
+        <th style="border-bottom:none;border-left:none;border-right:1px solid rgb(214, 214, 214);border-top:none;height:40px;padding:9px 18px;"><strong>跃点数</strong></th>
+        <td style="border-bottom:none;border-left:none;border-right:none;border-top:none;height:40px;padding:9px 18px;">
+          <p>路由优先级权重，值越小优先级越高。例如同一目标网络的多路由中，系统优先选择跃点数最低的路径。</p>
+          <p>&nbsp;</p>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</figure>
+<h4><strong>三、路由类型与用户数据解读</strong></h4>
+<blockquote>
+  <p>IPv4 路由表</p>
+  <p>===========================================================================</p>
+  <p>活动路由:</p>
+  <p>网络目标 &nbsp; &nbsp; &nbsp; &nbsp;网络掩码 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;网关 &nbsp; &nbsp; &nbsp; 接口 &nbsp; 跃点数</p>
+  <p>&nbsp; &nbsp; &nbsp; &nbsp; 10.0.0.0 &nbsp; &nbsp; &nbsp; &nbsp;255.0.0.0 &nbsp; &nbsp;192.168.240.1 &nbsp; 192.168.240.55 &nbsp; &nbsp; 36</p>
+  <p>&nbsp; &nbsp; &nbsp; &nbsp; 47.0.0.0 &nbsp; &nbsp; &nbsp; &nbsp;255.0.0.0 &nbsp; &nbsp;192.168.240.1 &nbsp; 192.168.240.55 &nbsp; &nbsp; 36</p>
+  <p>&nbsp; &nbsp; &nbsp; &nbsp;116.0.0.0 &nbsp; &nbsp; &nbsp; &nbsp;255.0.0.0 &nbsp; &nbsp;192.168.240.1 &nbsp; 192.168.240.55 &nbsp; &nbsp; 36</p>
+  <p>&nbsp; &nbsp; &nbsp; &nbsp;127.0.0.0 &nbsp; &nbsp; &nbsp; &nbsp;255.0.0.0 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;在链路上 &nbsp; &nbsp; &nbsp; &nbsp; 127.0.0.1 &nbsp; &nbsp;331</p>
+  <p>&nbsp; &nbsp; &nbsp; &nbsp;127.0.0.1 &nbsp;255.255.255.255 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;在链路上 &nbsp; &nbsp; &nbsp; &nbsp; 127.0.0.1 &nbsp; &nbsp;331</p>
+  <p>&nbsp;127.255.255.255 &nbsp;255.255.255.255 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;在链路上 &nbsp; &nbsp; &nbsp; &nbsp; 127.0.0.1 &nbsp; &nbsp;331</p>
+  <p>&nbsp; &nbsp; &nbsp;192.168.0.0 &nbsp; &nbsp;255.255.255.0 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;在链路上 &nbsp; &nbsp; &nbsp; 192.168.0.2 &nbsp; &nbsp;291</p>
+  <p>&nbsp; &nbsp; &nbsp;192.168.0.2 &nbsp;255.255.255.255 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;在链路上 &nbsp; &nbsp; &nbsp; 192.168.0.2 &nbsp; &nbsp;291</p>
+  <p>&nbsp; &nbsp;192.168.0.255 &nbsp;255.255.255.255 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;在链路上 &nbsp; &nbsp; &nbsp; 192.168.0.2 &nbsp; &nbsp;291</p>
+  <p>&nbsp; &nbsp;192.168.240.0 &nbsp; &nbsp;255.255.255.0 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;在链路上 &nbsp; &nbsp;192.168.240.55 &nbsp; &nbsp;291</p>
+  <p>&nbsp; 192.168.240.55 &nbsp;255.255.255.255 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;在链路上 &nbsp; &nbsp;192.168.240.55 &nbsp; &nbsp;291</p>
+  <p>&nbsp;192.168.240.255 &nbsp;255.255.255.255 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;在链路上 &nbsp; &nbsp;192.168.240.55 &nbsp; &nbsp;291</p>
+  <p>&nbsp; &nbsp;192.168.253.0 &nbsp; &nbsp;255.255.255.0 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;在链路上 &nbsp; 192.168.253.153 &nbsp; &nbsp;291</p>
+  <p>&nbsp;192.168.253.153 &nbsp;255.255.255.255 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;在链路上 &nbsp; 192.168.253.153 &nbsp; &nbsp;291</p>
+  <p>&nbsp;192.168.253.255 &nbsp;255.255.255.255 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;在链路上 &nbsp; 192.168.253.153 &nbsp; &nbsp;291</p>
+  <p>&nbsp; &nbsp; &nbsp; &nbsp;224.0.0.0 &nbsp; &nbsp; &nbsp; &nbsp;240.0.0.0 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;在链路上 &nbsp; &nbsp; &nbsp; &nbsp; 127.0.0.1 &nbsp; &nbsp;331</p>
+  <p>&nbsp; &nbsp; &nbsp; &nbsp;224.0.0.0 &nbsp; &nbsp; &nbsp; &nbsp;240.0.0.0 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;在链路上 &nbsp; 192.168.253.153 &nbsp; &nbsp;291</p>
+  <p>&nbsp; &nbsp; &nbsp; &nbsp;224.0.0.0 &nbsp; &nbsp; &nbsp; &nbsp;240.0.0.0 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;在链路上 &nbsp; &nbsp; &nbsp; 192.168.0.2 &nbsp; &nbsp;291</p>
+  <p>&nbsp; &nbsp; &nbsp; &nbsp;224.0.0.0 &nbsp; &nbsp; &nbsp; &nbsp;240.0.0.0 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;在链路上 &nbsp; &nbsp;192.168.240.55 &nbsp; &nbsp;291</p>
+  <p>&nbsp;255.255.255.255 &nbsp;255.255.255.255 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;在链路上 &nbsp; &nbsp; &nbsp; &nbsp; 127.0.0.1 &nbsp; &nbsp;331</p>
+  <p>&nbsp;255.255.255.255 &nbsp;255.255.255.255 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;在链路上 &nbsp; 192.168.253.153 &nbsp; &nbsp;291</p>
+  <p>&nbsp;255.255.255.255 &nbsp;255.255.255.255 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;在链路上 &nbsp; &nbsp; &nbsp; 192.168.0.2 &nbsp; &nbsp;291</p>
+  <p>&nbsp;255.255.255.255 &nbsp;255.255.255.255 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;在链路上 &nbsp; &nbsp;192.168.240.55 &nbsp; &nbsp;291</p>
+  <p>===========================================================================</p>
+  <p>永久路由:</p>
+  <p>&nbsp;网络地址 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;网络掩码 &nbsp;网关地址 &nbsp;跃点数</p>
+  <p>&nbsp; &nbsp; &nbsp; &nbsp;116.0.0.0 &nbsp; &nbsp; &nbsp; &nbsp;255.0.0.0 &nbsp; &nbsp;192.168.240.1 &nbsp; &nbsp; &nbsp; 1</p>
+  <p>&nbsp; &nbsp; &nbsp; &nbsp; 47.0.0.0 &nbsp; &nbsp; &nbsp; &nbsp;255.0.0.0 &nbsp; &nbsp;192.168.240.1 &nbsp; &nbsp; &nbsp; 1</p>
+  <p>&nbsp; &nbsp; &nbsp; &nbsp; 10.0.0.0 &nbsp; &nbsp; &nbsp; &nbsp;255.0.0.0 &nbsp; &nbsp;192.168.240.1 &nbsp; &nbsp; &nbsp; 1</p>
+  <p>===========================================================================</p>
+</blockquote>
+<h5><strong>1. 活动路由（Active Routes）</strong></h5>
+<ul>
+  <li><strong>本地环路</strong>：<code>127.0.0.0/8</code>用于本地进程间通信，绑定到回环接口（Loopback）。</li>
+  <li><strong>直连子网</strong>：<ul>
+      <li><code>192.168.0.0/24</code>和<code>192.168.240.0/24</code>等表示本地物理网卡直接连接的局域网。</li>
+      <li>广播地址（如<code>192.168.0.255</code>）和单播地址（如<code>192.168.0.2/32</code>）由系统自动生成。</li>
+    </ul>
+  </li>
+  <li><strong>跨网段路由</strong>：<ul>
+      <li><code>10.0.0.0/8</code>、<code>47.0.0.0/8</code>、<code>116.0.0.0/8</code>均指向网关<code>192.168.240.1</code>，推测为<strong>企业内网或VPN路由</strong>，强制特定私有IP段通过指定网关转发。</li>
+    </ul>
+  </li>
+  <li><strong>组播路由</strong>：<ul>
+      <li><code>224.0.0.0/4</code>映射到多个接口，支持组播数据分发（如视频会议、P2P应用）。</li>
+    </ul>
+  </li>
+</ul>
+<h5><strong>2. 永久路由（Persistent Routes）</strong></h5>
+<ul>
+  <li>配置的三条永久路由（<code>10.0.0.0/8</code>、<code>47.0.0.0/8</code>、<code>116.0.0.0/8</code>）通过<code>route add -p</code>命令添加，重启后仍生效，常见于<strong>VPN或企业网络强制分流</strong>。</li>
+</ul>
+<p>&nbsp;</p>
+<h4><strong>四、路由匹配机制</strong></h4>
+<ol>
+  <li><strong>最长前缀匹配</strong>：系统优先选择掩码最长（即最精确）的路由条目。例如，访问<code>10.1.2.3</code>时，若存在<code>10.0.0.0/8</code>和<code>10.1.0.0/16</code>两条路由，后者优先级更高。</li>
+  <li><strong>跃点数决胜</strong>：若掩码长度相同，则选择跃点数更小的路由。例如用户表中<code>10.0.0.0/8</code>的跃点数为36，可能因接口速率更快（如千兆网卡）而被优先选择。</li>
+</ol>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<h2>路由决策的基本流程（以 192.168.253.4 为目标）</h2>
+<h3>1. 匹配目标地址：</h3>
+<p>你发起 Socket 连接的目标是 <code>192.168.253.4</code>，路由器首先会查找<strong>哪个路由条目匹配这个目标地址</strong>。</p>
+<p>（我们只看与 192.168.253.x 相关的部分）：</p>
+<p><code>192.168.253.0 &nbsp; &nbsp;255.255.255.0 &nbsp; &nbsp; 在链路上 &nbsp; &nbsp;192.168.253.153 &nbsp; &nbsp;291
+  </code></p>
+<p><code>192.168.253.153 &nbsp;255.255.255.255 &nbsp; 在链路上 &nbsp; &nbsp;192.168.253.153 &nbsp; &nbsp;291
+  </code></p>
+<p><code>192.168.253.255 &nbsp;255.255.255.255 &nbsp; 在链路上 &nbsp; &nbsp;192.168.253.153 &nbsp; &nbsp;291
+  </code></p>
+<p>现在逐条对比目标地址 <code>192.168.253.4</code>：</p>
+<figure class="table">
+  <table>
+    <thead>
+      <tr>
+        <th>路由目标</th>
+        <th>掩码</th>
+        <th>匹配？</th>
+        <th>说明</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>192.168.253.0</code></td>
+        <td><code>255.255.255.0</code></td>
+        <td>✅ 是</td>
+        <td>匹配整个子网 <code>/24</code>，即 <code>192.168.253.1 ~ 192.168.253.254</code></td>
+      </tr>
+      <tr>
+        <td><code>192.168.253.153</code></td>
+        <td><code>255.255.255.255</code></td>
+        <td>❌ 否</td>
+        <td>精确匹配本机，不匹配目标地址</td>
+      </tr>
+      <tr>
+        <td><code>192.168.253.255</code></td>
+        <td><code>255.255.255.255</code></td>
+        <td>❌ 否</td>
+        <td>匹配广播地址，不匹配目标</td>
+      </tr>
+    </tbody>
+  </table>
+</figure>
+<p>✅ 所以，目标 <code>192.168.253.4</code> 匹配的是：</p>
+<p><code>192.168.253.0 &nbsp; &nbsp;255.255.255.0 &nbsp; &nbsp; 在链路上 &nbsp; &nbsp;192.168.253.153 &nbsp; &nbsp;291</code></p>
+<p>&nbsp;</p>

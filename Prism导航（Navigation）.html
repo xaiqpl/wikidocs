@@ -1,0 +1,190 @@
+<!--
+title: Prism导航 （Navigation）
+description: 
+published: true
+date: 2025-04-16T02:27:16.604Z
+tags: wpf, prism
+editor: ckeditor
+dateCreated: 2025-04-15T11:54:58.033Z
+-->
+
+<h1>Prism：导航（Navigation）</h1>
+<h2>导航的步骤</h2>
+<p>1. 注册显示区域</p>
+<p>2. 注册导航页面</p>
+<h4>注册显示区域</h4>
+<p>在ViewModel通过构造函数注入IRegionManager，通过regionManger管理显示区域；</p>
+<pre><code class="language-plaintext">var regionManager = ContainerProvider.Resolve&lt;IRegionManager&gt;();</code></pre>
+<h4>注册导航页面</h4>
+<p>&nbsp;app.xaml.cs或者module里面注册</p>
+<pre><code class="language-plaintext">//指定ViewModel           
+containerRegistry.RegisterForNavigation&lt;ViewA, ViewAViewModel&gt;();
+ //指定ViewModel并且添加别名            
+containerRegistry.RegisterForNavigation&lt;ViewB, ViewBViewModel&gt;("CustomName");</code></pre>
+<h4>使用导航</h4>
+<p>&nbsp;通过区域管理器来管理导航</p>
+<pre><code class="language-plaintext">//参数1 RegionName：定义的区域名字， 第二个参数：ViewName，显示的视图名字
+ContainerProvider.Resolve&lt;IRegionManager&gt;().RequestNavigate(RegionNames.ContentRegion, nameof(TestRequestView)); 
+//带参数的导航，Params:为键值对
+NavigationParameters paras = new NavigationParameters();
+paras.Add("MsgA","大家好，我是A!");
+//regionManager.Regions["ContentRegion"].RequestNavigate(viewName, paras);
+regionManager.RequestNavigate("ContentRegion",viewName, paras);</code></pre>
+<p>在导航界面接收参数：</p>
+<blockquote>
+  <p>方法执行流程：执行流程：(当导航到一个区域时)</p>
+</blockquote>
+<figure class="image image_resized" style="width:82.97%;"><img src="/3267782-20240828174317198-1420013469.png"></figure>
+<p>&nbsp;</p>
+<blockquote>
+  <p>执行流程：(当导航到一个区域时,切换界面时)</p>
+</blockquote>
+<p>&nbsp;</p>
+<figure class="image image_resized image-style-align-left" style="width:75.18%;"><img src="/3267782-20240828175443189-415922405.png"></figure>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<pre><code class="language-plaintext">
+
+//INavigationAware传输接口(实现接口的3个方法)，IConfirmNavigationRequest继承了该接口 
+public  class ViewAViewModel:BindableBase,IConfirmNavigationRequest
+{
+	//导航完成前, 此处可以传递过来的参数以及是否允许导航等动作的控制
+	public void OnNagigatedTo(NavigationContext navigationContext)
+	{
+		if(navigationContext.Parameters.ContainsKey("MsgA")
+		{
+			Message=navitationContext.Parameters.GetValue&lt;string&gt;("MsgA");
+		}
+	}
+	//调用以确定此实例是否可以处理导航请求（一般返回true）。否则新建实例。
+	public void IsNavigationTarget(NavigationContext navigationContext)
+	{
+		return true;
+	}
+	//当导航离开当前页时, 类似打开A, 再打开B时, 该方法被触发。(拦截)
+	public void OnNavigatedFrom(NavigationContext navigationContext)
+	{
+		
+	}
+	//继承IConfirmNavigationRequest接口 在上面实现的三个方法上多实现了一个方法
+	//比如从ViewA到ViewB时，利用此方法可以进行确认是否离开ViewA
+	public void ConfirNavigationRequest(NavigationContext navigationContext,Action&lt;bool&gt; continuationCallback)
+	{
+		bool result=true;
+		if(MssageBox.Show("?","?",MessageBoxButton.YesNo)==MessageBoxResult.No)
+		{
+			result =false;
+		}
+		continuationCallback(result);
+	}
+
+}</code></pre>
+<h2><strong>导航日志记录</strong></h2>
+<p><strong>&nbsp;通过实现IRegionNavigationJournal</strong>接口，可以记录导航日志，<strong>不仅仅是一次，是完整的切换记录</strong>，比如A-&gt;B-&gt;C也是可以返回到A的，类似于撤销</p>
+<blockquote>
+  <p>导航接口在请求导航的时候的方法里面里面，每进行一次导航就进行一次记录：</p>
+</blockquote>
+<pre><code class="language-plaintext">private IRegionNavigationJournal regionNavigationJournal;
+public void NavigationToSomeView()
+{
+	regionNavigationJournal.RequestNavigate("RegionName","ViewName",callback=&gt;{
+		regionNavigationJoural=callback.Context.NavigationService.Journal;
+	});
+}</code></pre>
+<blockquote>
+  <p>1、Prism的导航日志INavigationJournal的管理是自动运行的,其中包括记录成功的导航日志.而NavigationCallback是用来检测导航结果检查的,可以在这里根据导航成功或者失败做一些特殊处理.</p>
+  <p>2、导航日志对象INavigationJournal是通过NavigationService获取到的. 导航日志的创建也可以手动参与维护,如下面这种导航日志记录的方式也是可以的,并且自己还可以自定义导航日志,比如有些操作自己可以自定义过滤掉.</p>
+</blockquote>
+<pre><code class="language-plaintext">private IRegionNavigationJournal? _navigationJournal;
+private void DoGoForward()
+{
+   if (_navigationJournal != null &amp;&amp; _navigationJournal.CanGoForward)
+   {
+       _navigationJournal?.GoForward();
+   }
+}
+private void DoGoBack()
+{
+   if (_navigationJournal != null &amp;&amp; _navigationJournal.CanGoBack)
+   {
+       _navigationJournal?.GoBack();
+   }
+}
+
+private void DoOpenViewA()
+{
+   _regionManager.RequestNavigate(RegionNameManager.MainViewRegion, nameof(ViewA), NavigationComplete);
+}
+
+private void NavigationComplete(NavigationResult result)
+{
+   if (result.Result == true)
+   {
+       // 这里添加导航日志
+       _navigationJournal = result.Context.NavigationService.Journal;
+       System.Diagnostics.Debug.WriteLine($"导航到{result.Context.Uri}视图成功");
+   }
+   else
+   {
+       System.Diagnostics.Debug.WriteLine($"导航到{result.Context.Uri}视图失败");
+   }
+}</code></pre>
+<h2>导航切换后的View处理：</h2>
+<p>在 Prism 默认的导航模型里，从 ViewA 导航到 ViewB 时，Prism 并不会自动“销毁”ViewA，而是把它从活动状态（Active）切换为非活动（Deactive），并保留在 Region 中，以便后面你能快速“返回”（Journal.GoBack）或再次激活它。</p>
+<h3>1、默认行为</h3>
+<ul>
+  <li><strong>KeepAlive = true</strong><br>默认情况下，Prism 会对所有注册到 Region 的视图保持活跃（KeepAlive）。也就是说，ViewA 被导航走后，Prism 只是把它 Deactivate，但并不 Remove，也不调用 Destroy。</li>
+  <li><strong>默认不必手动释放</strong></li>
+</ul>
+<p>如果你的 ViewA/VM 没有持有大量非托管资源，也没有长生命周期的订阅（比如对外部服务、定时器、文件句柄等），通常就不需要关注它“看不见”后在内存中的状态。</p>
+<p>.NET 的垃圾回收会在对象不再被任何地方引用时自动回收，如果你从来没 Remove 它，它就始终被 RegionManager 引用，自然也不会被 GC。</p>
+<h3>2、何时需要“释放”或“销毁”ViewA</h3>
+<ul>
+  <li><strong>需要释放大量资源</strong><br>比如 ViewA 包含视频播放控件、大量图片缓存、数据库连接、或对外部服务的订阅，这些都需要在 ViewA 不再使用时手动清理。</li>
+  <li><strong>不希望缓存过多页面</strong><br>如果你的应用页面非常多，来回切换时又不需要保留历史状态，就可以让 Prism 在导航离开时销毁旧页面，避免内存占用不断上涨。</li>
+</ul>
+<h2>如何让 Prism 在导航离开时销毁 ViewA</h2>
+<h3>1. 实现 <code>IRegionMemberLifetime</code></h3>
+<p>在你的 View 或 ViewModel 上加上：</p>
+<pre><code class="language-plaintext">// 引入 Prism.Regions 命名空间
+
+[RegionMemberLifetime(KeepAlive = false)]
+
+public class ViewAViewModel : BindableBase
+
+{
+    // …
+}
+
+//KeepAlive = false：当你从该视图导航走后，Prism 会 Remove 它，并且如果它实现了 IDestructible，还会调用 Destroy()。</code></pre>
+<h3>2. 实现 <code>IDestructible</code></h3>
+<p>在你的 VM（或 View）中实现 <code>IDestructible</code>，Prism Remove 视图前会调用 <code>Destroy()</code>，你可以在这里做清理：</p>
+<pre><code class="language-plaintext">public class ViewAViewModel : BindableBase, IDestructible
+{    
+	// 构造中可能订阅了事件、启动了计时器……    
+	public ViewAViewModel(IEventAggregator ea)
+    {
+        // …
+    }
+    public void Destroy()
+    {
+        // 取消订阅、释放资源、停止定时器……
+    }
+}</code></pre>
+<p>&nbsp;</p>
