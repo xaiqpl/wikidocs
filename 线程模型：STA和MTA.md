@@ -2,7 +2,7 @@
 title: 线程模型：STA和MTA
 description: 
 published: true
-date: 2025-06-27T01:27:55.809Z
+date: 2025-06-27T01:30:16.672Z
 tags: wpf, .net, winform
 editor: markdown
 dateCreated: 2025-06-26T09:33:33.902Z
@@ -36,7 +36,7 @@ dateCreated: 2025-06-26T09:33:33.902Z
 
 ## 3、STA线程中创建窗体的方法
 ### 3.1 Winform使用Application.Run(form)运行；
->  var thread = new Thread(() =>
+> ``` var thread = new Thread(() =>
 > {  
 >     // 2．创建窗体
 >     var form = new SecondaryForm();
@@ -72,7 +72,7 @@ dateCreated: 2025-06-26T09:33:33.902Z
 
 ### 3.3 Wpf使用Dispatch.Run()启动消息循环
 > 
-> // 在主线程中启动一个新的 STA 线程
+> ``` // 在主线程中启动一个新的 STA 线程
 > var thread = new Thread(() =>
 > {
 > 
@@ -92,9 +92,9 @@ dateCreated: 2025-06-26T09:33:33.902Z
 >ShowDialog() 在内部创建并运行一个 Dispatcher 循环，直到窗口关闭才返回。
 这种方式更简便，但窗口会以模态形式存在，阻塞当前线程直到关闭。
 >
-> // 在主线程中启动一个新的 STA 线程
+> ``` // 在主线程中启动一个新的 STA 线程
 > var thread = new Thread(() =>
-> {
+> 	{
 > 
 >     // 在该线程上创建并显示 WPF 窗口
 >     var window = new SecondaryWindow();
@@ -108,4 +108,6 @@ dateCreated: 2025-06-26T09:33:33.902Z
 **非模态窗口：** 必须在 STA 线程里手动调用 Dispatcher.Run() 来启动消息泵。
 
 **模态窗口：** 直接调用 ShowDialog()，WPF 会自动在内部启动消息循环。
+
+
 
