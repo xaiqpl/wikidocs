@@ -2,7 +2,7 @@
 title: 线程模型：STA和MTA
 description: 
 published: true
-date: 2025-06-27T01:30:16.672Z
+date: 2025-06-27T01:32:44.189Z
 tags: wpf, .net, winform
 editor: markdown
 dateCreated: 2025-06-26T09:33:33.902Z
@@ -36,7 +36,8 @@ dateCreated: 2025-06-26T09:33:33.902Z
 
 ## 3、STA线程中创建窗体的方法
 ### 3.1 Winform使用Application.Run(form)运行；
-> ``` var thread = new Thread(() =>
+> ``` csharp 
+> var thread = new Thread(() =>
 > {  
 >     // 2．创建窗体
 >     var form = new SecondaryForm();
@@ -56,7 +57,8 @@ dateCreated: 2025-06-26T09:33:33.902Z
 >
 >ShowDialog() 会在内部启动一个临时的消息泵，让窗体可交互、可重绘。
 直到对话框关闭，ShowDialog() 才返回 。
-> '''c#// 验证
+> ``` csharp
+> // 验证
 > var thread = new Thread(() =>
 > {  
 >     // 2．创建窗体
@@ -67,12 +69,13 @@ dateCreated: 2025-06-26T09:33:33.902Z
 > });
 > thread.SetApartmentState(ApartmentState.STA);
 > thread.IsBackground = true;
-> thread.Start(); '''
+> thread.Start(); 
 {.is-success}
 
 ### 3.3 Wpf使用Dispatch.Run()启动消息循环
 > 
-> ``` // 在主线程中启动一个新的 STA 线程
+> ``` csharp 
+> // 在主线程中启动一个新的 STA 线程
 > var thread = new Thread(() =>
 > {
 > 
@@ -91,8 +94,8 @@ dateCreated: 2025-06-26T09:33:33.902Z
 > 
 >ShowDialog() 在内部创建并运行一个 Dispatcher 循环，直到窗口关闭才返回。
 这种方式更简便，但窗口会以模态形式存在，阻塞当前线程直到关闭。
->
-> ``` // 在主线程中启动一个新的 STA 线程
+>``` csharp 
+>  // 在主线程中启动一个新的 STA 线程
 > var thread = new Thread(() =>
 > 	{
 > 
