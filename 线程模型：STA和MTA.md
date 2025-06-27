@@ -2,7 +2,7 @@
 title: 线程模型：STA和MTA
 description: 
 published: true
-date: 2025-06-27T01:25:04.916Z
+date: 2025-06-27T01:27:55.809Z
 tags: wpf, .net, winform
 editor: markdown
 dateCreated: 2025-06-26T09:33:33.902Z
@@ -56,7 +56,7 @@ dateCreated: 2025-06-26T09:33:33.902Z
 >
 >ShowDialog() 会在内部启动一个临时的消息泵，让窗体可交互、可重绘。
 直到对话框关闭，ShowDialog() 才返回 。
-> // 验证
+> '''c#// 验证
 > var thread = new Thread(() =>
 > {  
 >     // 2．创建窗体
@@ -67,7 +67,7 @@ dateCreated: 2025-06-26T09:33:33.902Z
 > });
 > thread.SetApartmentState(ApartmentState.STA);
 > thread.IsBackground = true;
-> thread.Start(); 
+> thread.Start(); '''
 {.is-success}
 
 ### 3.3 Wpf使用Dispatch.Run()启动消息循环
