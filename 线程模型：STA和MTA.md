@@ -2,7 +2,7 @@
 title: 线程模型：STA和MTA
 description: 
 published: true
-date: 2025-06-27T00:52:26.739Z
+date: 2025-06-27T00:56:10.404Z
 tags: wpf, .net, winform
 editor: markdown
 dateCreated: 2025-06-26T09:33:33.902Z
@@ -56,12 +56,11 @@ dateCreated: 2025-06-26T09:33:33.902Z
 >
 >ShowDialog() 会在内部启动一个临时的消息泵，让窗体可交互、可重绘。
 直到对话框关闭，ShowDialog() 才返回 。
->
->var thread = new Thread(() =>
+> // 验证
+> var thread = new Thread(() =>
 > {  
 >     // 2．创建窗体
->     var form = new SecondaryForm();
->     
+>     var form = new SecondaryForm();>     
 >     // 3．启动消息循环并显示窗体
 >     //    这句会阻塞当前线程，直到窗体关闭
 >     form.ShowDialog();   
