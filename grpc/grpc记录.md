@@ -2,7 +2,7 @@
 title: Grpc记录
 description: 
 published: true
-date: 2025-07-29T06:58:10.327Z
+date: 2025-07-29T08:21:49.388Z
 tags: grpc
 editor: markdown
 dateCreated: 2025-07-29T05:30:31.572Z
@@ -179,8 +179,8 @@ GrpcServices="None"（或省略此属性）：只生成消息类型（message、
 在编译阶段提供对 .proto 文件的处理支持。
 {.is-success}
 
-
-> 在生成C#类之后，接下来需要定义服务接口。借助 Grpc.Tools NuGet包，可以将protobuf文件中的服务定义转换为C#中的接口。
+#### 实现服务接口
+> 借助 Grpc.Tools NuGet包，可以将protobuf文件中的服务定义转换为C#中的接口。
 > 代码中定义了 LinkServerFunc 类，该类实现了 LinkBase ，并重写了 GetMessage、GetMessageList方法，该方法处理消息并返回相应的回复。
 {.is-info}
 
@@ -209,5 +209,40 @@ namespace TGrpcService
             return Task.FromResult(mesList);
         }
     }
+```
+#### 启用服务监听
+开发者需要创建服务端应用程序来承载 LinkServerFunc 服务。
+``` csharp
+ public class LinkFunc
+ {
+ 			//创建委托，在外部进行实现
+     public static Func<string, string> ReplyMes;
+     public static Func<string,IEnumerable<Mes>> ReplyMesList;
+     //定义服务 
+     public static Server LinkServer;
+     //启动服务监听
+     public static void LinkServerStart(string host, int port)
+     {
+         LinkServer = new Server
+         {
+            // Services 处可同时添加多个服务监听
+            //当你有多个 .proto 文件，每个生成一组服务存根（stubs）时，只需要在创建 Server 对象时，把每个服务的 BindService 调用都加到 Services 集合里。
+             Services =
+                 {
+                   Link.BindService(new LinkServerFunc()),
+                   GrpcDemo.Greeter.BindService(new GreeterService())
 
+                 },
+             Ports = { new ServerPort(host, port, ServerCredentials.Insecure) }
+         };
+         LinkServer.Start();
+     }
+     /// <summary>
+     ///  服务端关闭
+     /// </summary>
+     public static void LinkServerClose()
+     {
+         LinkServer?.ShutdownAsync().Wait();
+     }
+ }
 ```
