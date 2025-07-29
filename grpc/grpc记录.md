@@ -2,7 +2,7 @@
 title: Grpc记录
 description: 
 published: true
-date: 2025-07-29T05:55:09.052Z
+date: 2025-07-29T06:58:10.327Z
 tags: grpc
 editor: markdown
 dateCreated: 2025-07-29T05:30:31.572Z
@@ -122,7 +122,7 @@ gRPC是一个高性能、开源和通用的RPC框架，使用protobuf作为其�
 {.is-info}
 
 下面是如何定义一个简单的protobuf服务：
-```
+``` java
 syntax = "proto3";
 package example;
 //定义了一个名为 Link 的 gRPC 服务。在 gRPC 中，服务是由一个或多个 RPC 方法组成的
@@ -150,3 +150,64 @@ message Mes
 > 这种服务定义后，gRPC可以生成客户端和服务端代码，这样开发者就可以专注于实现服务逻辑，而不必担心通信协议细节。
 {.is-info}
 
+## 3 C#中服务接口的定义与实现
+### 3.1 在C#中定义服务接口
+> 在C#中定义服务接口涉及到从protobuf定义生成C#代码，并在此基础上定义服务接口和方法。为了在C#中使用protobuf定义的消息和服务接口，首先需要使用protobuf编译器 protoc 生成C#类。
+{.is-info}
+
+在项目文件中添加以下配置后，可自动触发源代码生成器生成代码：
+``` html
+<ItemGroup>
+  <!-- 只生成服务端基类,*.proto匹配目录下所有proto文件  -->
+  <Protobuf Include="Protos\*.proto" GrpcServices="Server" />
+</ItemGroup>
+<ItemGroup>
+  <!-- 只生成客户端存根  *.proto匹配目录下所有proto文件-->
+  <Protobuf Include="Protos\*.proto" GrpcServices="Client" />
+</ItemGroup>
+GrpcServices="Both"：同时生成 FooBase + FooClient，常用于 Shared 库。
+GrpcServices="None"（或省略此属性）：只生成消息类型（message、enum），但不生成任何 RPC 存根。
+```
+### 3.2 定义服务接口和方法
+#### 必要的引用
+> **Google.Protobuf** ：
+实现 Protocol Buffers（protobuf）的序列化与反序列化。
+任何时候你需要对 protobuf 消息进行编码/解码（无论是通过 gRPC 还是直接使用 protobuf 存储/传输）都要引用它。
+> **Grpc.Core**：
+提供 gRPC 客户端与服务器的核心运行时。
+> **Grpc.Tools** ：
+在编译阶段提供对 .proto 文件的处理支持。
+{.is-success}
+
+
+> 在生成C#类之后，接下来需要定义服务接口。借助 Grpc.Tools NuGet包，可以将protobuf文件中的服务定义转换为C#中的接口。
+> 代码中定义了 LinkServerFunc 类，该类实现了 LinkBase ，并重写了 GetMessage、GetMessageList方法，该方法处理消息并返回相应的回复。
+{.is-info}
+
+示例如下：
+``` csharp
+using Grpc.Core;
+using GrpcDemo;
+using LinkService;
+using static LinkService.Link;
+
+namespace TGrpcService
+{
+    public class LinkServerFunc:LinkBase
+    {
+        public override Task<Mes> GetMessage(Mes request, ServerCallContext context)
+        {
+            // 处理接收到的消息
+            Mes mes = new Mes();
+            mes.StrReply=LinkFunc.ReplyMes(request.StrRequest);
+            return Task.FromResult(mes);
+        }
+        public override Task<MesList> GetMessageList(Mes request, ServerCallContext context)
+        {
+            // 处理接收到的消息列表
+            MesList mesList = new MesList();            		mesList.MesList_.AddRange(LinkFunc.ReplyMesList(request.StrRequest));
+            return Task.FromResult(mesList);
+        }
+    }
+
+```
