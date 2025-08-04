@@ -2,7 +2,7 @@
 title: Grpc记录
 description: 
 published: true
-date: 2025-07-29T08:21:49.388Z
+date: 2025-08-04T07:23:22.471Z
 tags: grpc
 editor: markdown
 dateCreated: 2025-07-29T05:30:31.572Z
@@ -151,7 +151,17 @@ message Mes
 {.is-info}
 
 ## 3 C#中服务接口的定义与实现
-### 3.1 在C#中定义服务接口
+### 3.1 定义服务接口和方法
+#### 添加必要的引用
+> **Google.Protobuf** ：
+实现 Protocol Buffers（protobuf）的序列化与反序列化。
+任何时候你需要对 protobuf 消息进行编码/解码（无论是通过 gRPC 还是直接使用 protobuf 存储/传输）都要引用它。
+> **Grpc.Core**：
+提供 gRPC 客户端与服务器的核心运行时。
+> **Grpc.Tools** ：
+在编译阶段提供对 .proto 文件的处理支持。
+{.is-success}
+
 > 在C#中定义服务接口涉及到从protobuf定义生成C#代码，并在此基础上定义服务接口和方法。为了在C#中使用protobuf定义的消息和服务接口，首先需要使用protobuf编译器 protoc 生成C#类。
 {.is-info}
 
@@ -168,16 +178,7 @@ message Mes
 GrpcServices="Both"：同时生成 FooBase + FooClient，常用于 Shared 库。
 GrpcServices="None"（或省略此属性）：只生成消息类型（message、enum），但不生成任何 RPC 存根。
 ```
-### 3.2 定义服务接口和方法
-#### 必要的引用
-> **Google.Protobuf** ：
-实现 Protocol Buffers（protobuf）的序列化与反序列化。
-任何时候你需要对 protobuf 消息进行编码/解码（无论是通过 gRPC 还是直接使用 protobuf 存储/传输）都要引用它。
-> **Grpc.Core**：
-提供 gRPC 客户端与服务器的核心运行时。
-> **Grpc.Tools** ：
-在编译阶段提供对 .proto 文件的处理支持。
-{.is-success}
+
 
 #### 实现服务接口
 > 借助 Grpc.Tools NuGet包，可以将protobuf文件中的服务定义转换为C#中的接口。
@@ -246,3 +247,106 @@ namespace TGrpcService
      }
  }
 ```
+可以通过创建S额viceIntercept来拦截服务消息的接受和发送情况。
+``` java
+public class ServiceInterceptor : Interceptor
+{
+    private readonly string _serviceName;
+    public ServiceInterceptor(string serviceName)
+    {
+        _serviceName = serviceName;
+    }
+    public override async Task<TResponse> UnaryServerHandler<TRequest, TResponse>(TRequest request, ServerCallContext context, UnaryServerMethod<TRequest, TResponse> continuation)
+    {
+        // 在这里可以添加日志、验证等逻辑
+        Metadata requestHeader;
+        if (context.RequestHeaders == null)
+        {
+            requestHeader = new Metadata();
+        }
+        else
+        {
+            requestHeader = context.RequestHeaders;
+        }
+        Console.WriteLine($"***Service: {_serviceName}, Begin, Method: {context.Method}, Request: {request}");
+        var response = await base.UnaryServerHandler(request, context, continuation);
+        Console.WriteLine($"***Service: {_serviceName}, End, Method: {context.Method}, response: {response}");
+        return response;
+    }
+}
+```
+ 在创建给Servers添加Serve时，添加通过服务对象调用Intercept返回的ServiceDefinition可以实现消息拦截
+> LinkServer = new Server
+> {
+>     Services =
+>         {
+>           Link.BindService(new LinkServerFunc()).Intercept(new ServiceInterceptor("LinK:")),
+>           GrpcDemo.Greeter.BindService(new GreeterService()).Intercept(new ServiceInterceptor("Greeter:"))
+> 
+>         },
+>     Ports = { new ServerPort(host, port, ServerCredentials.Insecure) }
+> }; 
+{.is-info}
+
+在前面LinkFunc中我们创建了相应的服务接口委托，在使用的时候我们需要给注册上相应的函数。
+``` csharp
+    static void Main(string[] args)
+    {
+        Console.WriteLine("Hello, World!");
+        LinkFunc.LinkServerStart("127.0.0.1", 9008);
+        Thread.Sleep(500);
+        LinkFunc.ReplyMes = ReplyMes;//注册函数
+        LinkFunc.ReplyMesList = ReplyList;//注册函数
+        Console.ReadKey();
+    }
+
+    private static IEnumerable<Mes> ReplyList(string strRequest)
+    {
+        Console.WriteLine("接收到:" + strRequest);
+        switch (strRequest)
+        {
+            case "1":
+                return new List<Mes> { new Mes { StrReply = "Server识别到1" }, new Mes { StrReply = "Server识别到11" }, new Mes { StrReply = "Server识别到111" } };
+            case "2":
+                return new List<Mes> { new Mes { StrReply = "Server识别到2" }, new Mes { StrReply = "Server识别到22" }, new Mes { StrReply = "Server识别到222" } };
+            case "测试":
+                return new List<Mes> { new Mes { StrReply = "开始测试" }, new Mes { StrReply = "开始测试2" } };
+            case "连接服务端":
+                return new List<Mes> { new Mes { StrReply = "true" } , new Mes { StrReply = "true2" } };
+        }
+        return new List<Mes> { new Mes { StrReply = "Server未识别到指定参数" } };
+    }
+
+    /// <summary>
+    /// 接收到客户端信息后回复
+    /// </summary>
+    /// <param name="strRequest">客户端发送过来的内容</param>
+    /// <returns></returns>
+    public static string ReplyMes(string strRequest)
+    {
+        Console.WriteLine("接收到:" + strRequest);
+        switch (strRequest)
+        {
+            case "1":
+                return "Server识别到1";
+            case "2":
+                return "Server识别到2";
+            case "测试":
+                return "开始测试";
+            case "连接服务端":
+                return "true";
+        }
+        return "Server未识别到指定参数";
+    }
+}
+```
+## 4 C#中客户端接口的定义与调用
+### 3.1 定义服务接口
+#### 添加必要的引用
+> **Google.Protobuf** ：
+实现 Protocol Buffers（protobuf）的序列化与反序列化。
+> **Grpc.Core**：
+提供 gRPC 客户端与服务器的核心运行时。
+> **Grpc.Tools** ：
+在编译阶段提供对 .proto 文件的处理支持。
+{.is-success}
