@@ -2,7 +2,7 @@
 title: Grpc记录
 description: 
 published: true
-date: 2025-08-04T07:28:52.866Z
+date: 2025-08-04T08:17:40.466Z
 tags: grpc
 editor: markdown
 dateCreated: 2025-07-29T05:30:31.572Z
@@ -351,13 +351,174 @@ public class ServiceInterceptor : Interceptor
 在编译阶段提供对 .proto 文件的处理支持。
 {.is-success}
 
-> 接口的定义可与服务端使用同样的proto文件，在项目文件中添加
-> <ItemGroup>
->   <Protobuf Include="Protos\*.proto" GrpcServices="Client" />	 
-> </ItemGroup>
+> 接口的定义可与服务端使用同样的proto文件，在项目文件中添加以下配置后可自动生成C#代码
 {.is-info}
+```charp
+  <ItemGroup>
+    <Protobuf Include="Protos\*.proto" GrpcServices="Client" />	 
+  </ItemGroup>
+```
 
+在LinkFunc文件中定义LinkClient、 GreeterClient,然后定义发送函数，用来调用GRPC接口。
+``` java
+ public class LinkFunc
+ {        
+    
+     public static LinkClient LinkClient;
+     public static Greeter.GreeterClient greeterClient;
 
+     /// <summary>
+     /// 客户端启动
+     /// </summary>
+     /// <param name="strIp"></param>
+     public static void LinkClientStart(string strIp)
+     {
+         Channel prechannel = new Channel(strIp, ChannelCredentials.Insecure);
+         LinkClient = new LinkClient(prechannel);
+         greeterClient=new Greeter.GreeterClient(prechannel);
+     }
 
+     /// <summary>
+     /// 客户端发送消息函数
+     /// </summary>
+     /// <param name="strRequest"></param>
+     /// <returns></returns>
+     public static string SendMes(string strRequest)
+     {
+         Mes mes = new Mes();
+         mes.StrRequest = strRequest;
+         var res = LinkClient.GetMessage(mes);
+         return res.StrReply;
+     }
+     ///自动生成的异步和同步接口
+      public static Task<string> SendMesAsync(string strRequest)
+     {
+         Mes mes = new Mes();
+         mes.StrRequest = strRequest;
+         return LinkClient.GetMessageAsync(mes).ResponseAsync.ContinueWith(t => t.Result.StrReply);
+     }
 
+     public static IEnumerable<Mes> SendMesList(string strRequest)
+     {
+         Mes mes = new Mes();
+         mes.StrRequest = strRequest;
+         var res = LinkClient.GetMessageList(mes);
+         return res.MesList_;
+     }
+
+     public static string SendGreeter(string strRequest)
+     {           
+         HelloRequest helloRequest = new HelloRequest { Name = strRequest };
+         var res = greeterClient.SayHello(helloRequest);
+         return res.Message;
+     }
+ }
+```
+客户端可通过LinkFunc调用服务端接口，
+
+``` java
+static void Main(string[] args)
+{
+    Thread.Sleep(4000);
+    Console.WriteLine("Hello, World!");
+    LinkFunc.LinkClientStart("127.0.0.1:9008");
+    Console.WriteLine("连接服务端中");
+    string conn = LinkFunc.SendMes("连接服务端");
+
+    if (conn.Equals("true"))
+    {
+        Console.WriteLine("连接服务端成功!");
+
+        for (int i = 0; i < 10; i++)
+        {
+            Thread.Sleep(1000);
+            Console.WriteLine("输入测试内容..");
+            var line = Console.ReadLine();
+            var ret = LinkFunc.SendMes(line);
+            //获取到服务端返回的值
+            Console.WriteLine("link say:" + ret);
+       
+            var ret1 = LinkFunc.SendGreeter(line);
+            Console.WriteLine("greeate say:" + ret1);
+
+            var ret2 = LinkFunc.SendMesList(line);
+            int count = 1;
+            foreach (var mes in ret2)
+            {
+                Console.WriteLine("link say:" + count++ +", "+ mes.StrReply);                       
+            }
+        }
+    }
+
+    Console.WriteLine("连接失败 , 即将退出");
+    Console.ReadKey();
+    Thread.Sleep(2000);
+}
+```
+> 同样如果想在客户进行GRPC接口消息进行拦截，同服务端类似，自定义一个类ClientLoggingInvoker通过继承DefaultCallInvoker类，在ClientLoggingInvoker重写AsyncUnaryCall和BlockingUnaryCall方法，GRPC会根据客户端在调用的同步或异步方法中使用不同的拦截
+{.is-info}
+```java
+public class ClientLoggingInvoker : DefaultCallInvoker
+{
+    private readonly string _logFile;
+    public ClientLoggingInvoker(Channel channel, string logFile) : base(channel)
+    {
+        this._logFile = logFile;
+    }
+    /// <summary>
+    /// 在客户端使用异步调用时记录日志
+    /// </summary>
+    /// <typeparam name="TRequest"></typeparam>
+    /// <typeparam name="TResponse"></typeparam>
+    /// <param name="method"></param>
+    /// <param name="host"></param>
+    /// <param name="options"></param>
+    /// <param name="request"></param>
+    /// <returns></returns>
+    public override AsyncUnaryCall<TResponse> AsyncUnaryCall<TRequest, TResponse>(Method<TRequest, TResponse> method, string host, CallOptions options, TRequest request)
+    {           
+        try
+        {
+            Console.WriteLine($"{_logFile} call AsyncUnaryCall: {method.Name},{request}");
+            var response = base.AsyncUnaryCall(method, host, options, request);
+            //异步方法不要取结果
+            //异步方法不要取结果
+            Console.WriteLine($"{_logFile} ,AsyncUnaryCall resp {method.Name},{{}}");
+            return response;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"{_logFile} , resp {method.Name},{{}} ,{e.Message}");
+            throw;
+        }
+    }
+    /// <summary>
+    /// 在客户端使用阻塞调用时记录日志
+    /// </summary>
+    /// <typeparam name="TRequest"></typeparam>
+    /// <typeparam name="TResponse"></typeparam>
+    /// <param name="method"></param>
+    /// <param name="host"></param>
+    /// <param name="options"></param>
+    /// <param name="request"></param>
+    /// <returns></returns>
+    public override TResponse BlockingUnaryCall<TRequest, TResponse>(Method<TRequest, TResponse> method, string host, CallOptions options, TRequest request)
+    {
+        try
+        {
+            Console.WriteLine($"{_logFile} call  BlockingUnaryCall: {method.Name},{request}");
+            var response = base.BlockingUnaryCall(method, host, options, request);
+            //异步方法不要取结果
+            //异步方法不要取结果
+            Console.WriteLine($"{_logFile}  BlockingUnaryCall, resp {method.Name},{response}");
+            return response;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"{_logFile} , resp {method.Name},{{}} ,{e.Message}");
+            throw;
+        }
+    }
+}
+```
 
