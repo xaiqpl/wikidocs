@@ -2,7 +2,7 @@
 title: Grpc记录
 description: 
 published: true
-date: 2025-08-04T07:23:22.471Z
+date: 2025-08-04T07:28:52.866Z
 tags: grpc
 editor: markdown
 dateCreated: 2025-07-29T05:30:31.572Z
@@ -350,3 +350,14 @@ public class ServiceInterceptor : Interceptor
 > **Grpc.Tools** ：
 在编译阶段提供对 .proto 文件的处理支持。
 {.is-success}
+
+> 接口的定义可与服务端使用同样的proto文件，在项目文件中添加
+> <ItemGroup>
+>   <Protobuf Include="Protos\*.proto" GrpcServices="Client" />	 
+> </ItemGroup>
+{.is-info}
+
+
+
+
+
